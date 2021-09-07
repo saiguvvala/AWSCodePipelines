@@ -1,0 +1,231 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'create a basic s3 bucket'
+
+Parameters:
+  Prefix:
+    Type: String
+    Description: The stack prefix  
+
+  Environment:
+    Type: String
+    Description: The environment that the stack is deployed to
+    Default: sbx
+    AllowedValues:
+      - prd
+      - tst
+      - dev
+      - stg
+      - sbx
+      - int
+  
+  BucketName:
+    Type: String
+    Description: The S3 bucket name which has swagger document
+
+  GitHubOwner:
+    Type: String
+    Description: The owner of the GitHub repository
+
+  GitHubRepo:
+    Type: String
+    Description: The GitHub repository.
+
+  GitHubBranch:
+    Type: String
+    Description: The github branch
+    Default: master
+
+  GitToken:
+    Type: String
+    Description: The github token for Webhooks
+
+Resources:
+  ArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      VersioningConfiguration:
+        Status: Enabled
+      BucketName: !Sub ${Environment}-${Prefix}-s3-artifacts
+
+  WebHook:
+    Type: AWS::CodePipeline::Webhook
+    Properties: 
+      Name: !Sub ${Environment}-${Prefix}-wh
+      Authentication: 'GITHUB_HMAC'
+      AuthenticationConfiguration: 
+        SecretToken: !Ref GitToken
+      RegisterWithThirdParty: true
+      Filters:
+        - JsonPath: '$.ref'
+          MatchEquals: !Sub refs/heads/${GitHubBranch}
+      TargetAction: authorisation
+      TargetPipeline: !Ref CodePipeline
+      TargetPipelineVersion: 1
+
+  BuildS3UpdatesStack:
+    Type: AWS::CodeBuild::Project
+    DependsOn: ArtifactsBucket
+    Properties:
+      Name:  !Sub ${Environment}-${Prefix}-cb
+      Description: Builds the resources for S3 Updates
+      TimeoutInMinutes: 15
+      ServiceRole: !Ref CodeBuildRole
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:4.0
+        EnvironmentVariables:
+        - Name: ENVIRONMENT
+          Value: !Ref Environment
+        - Name: PREFIX
+          Value: !Ref Prefix
+        - Name: ARTIFACTS_BUCKET
+          Value: !Select [5, !Split [":", !GetAtt ArtifactsBucket.Arn]]
+        - Name: S3BUCKETNAME
+          Value: 'snsupdatesbucket'
+      Source:
+        BuildSpec: infrastructure/buildspec.yml
+        Type: CODEPIPELINE
+
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${Environment}-${Prefix}-codepipeline-rol
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - 'codepipeline.amazonaws.com'
+          Action:
+          - 'sts:AssumeRole'
+      Path: '/'
+      Policies:
+      - PolicyName: Permissions
+        PolicyDocument:
+          Version: '2012-10-17'      
+          Statement:
+          - Effect: Allow
+            Sid: policyforbuildstage
+            Action: 
+            - codebuild:StartBuild
+            - codebuild:BatchGetBuilds
+            Resource: "*"
+          - Effect: Allow
+            Sid: policyforDeployment
+            Action: 
+            - codebuild:StartBuild
+            - codebuild:BatchGetBuilds
+            - cloudformation:CreateChangeSet
+            - cloudformation:DescribeStacks
+            - cloudformation:CreateStack
+            - cloudformation:UpdateStack
+            - cloudformation:SetStackPolicy
+            - iam:PassRole
+            - iam:*
+            Resource: "*"
+          - Effect: Allow
+            Sid: policyforSourceToS3
+            Action:
+            - s3:GetObject
+            - s3:GetObjectVersion
+            - s3:GetBucketVersioning
+            - s3:PutObject
+            Resource: 
+              !Join
+                - ''
+                - - !GetAtt ArtifactsBucket.Arn
+                  - "/*"
+
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    DependsOn: ArtifactsBucket
+    Properties:
+      RoleName: !Sub ${Environment}-${Prefix}-codebuild-rol
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - 'codebuild.amazonaws.com'
+          Action:
+          - 'sts:AssumeRole'
+      Path: /
+      Policies:
+      - PolicyName: Permissions
+        PolicyDocument:
+          Version: '2012-10-17'       
+          Statement:
+            - Sid: "CloudWatchLogPermissions"
+              Effect: "Allow"
+              Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              Resource:              
+              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${Environment}-${Prefix}-cb:*
+            - Sid: "ArtifactStorePermissions"
+              Effect: "Allow"
+              Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:GetObjectVersion
+              Resource:
+                !Join
+                  - ''
+                  - - !GetAtt ArtifactsBucket.Arn
+                    - "/*"
+            - Sid: "DescribeStacks"
+              Effect: "Allow"
+              Action: cloudformation:DescribeStacks
+              Resource: 
+              - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${Environment}-${Prefix}/*"
+
+  CodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties: 
+      ArtifactStore:
+        Location: !Ref ArtifactsBucket
+        Type: S3
+      Name: !Sub ${Prefix}-${Environment}-codepipeline
+      RoleArn: !GetAtt PipelineRole.Arn
+      Stages:
+        - Name: Source
+          Actions:
+          - Name: authorisation
+            ActionTypeId:
+              Category: Source
+              Owner: ThirdParty
+              Provider: GitHub
+              Version: 1
+            Configuration:
+              Owner: !Ref GitHubOwner
+              Repo: !Ref GitHubRepo
+              PollForSourceChanges: 'false'
+              Branch: !Ref GitHubBranch
+              OAuthToken: !Ref GitToken 
+            OutputArtifacts: 
+              - Name: SourceOutput
+            RunOrder: 1
+    
+        - Name : Build
+          Actions:
+            - ActionTypeId: 
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration: 
+                ProjectName: !Ref BuildS3UpdatesStack
+              InputArtifacts: 
+                - Name: SourceOutput
+              Name: Build-S3Updates-Stack
+              OutputArtifacts: 
+                - Name: BuildOutput
+              RunOrder: 1
