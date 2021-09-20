@@ -9,7 +9,6 @@ phases:
       - git config --global url."https://$GITHUB_TOKEN:x-oauth-basic@github.com/".insteadOf "https://github.com/"
   post_build:
     commands:
-      - cd infrastructure
       - sed -i -e "s/{PARAM_PREFIX}/$PREFIX/g; s/{PARAM_ENVIRONMENT}/$ENVIRONMENT/g; s/{PARAM_BUCKETNAME}/$S3BUCKETNAME/g" configuration.json
       - aws cloudformation package --template-file aws-stacks/s3updates-stack.yml --s3-bucket $ARTIFACTS_BUCKET --output-template-file aws-stacks/s3updates-stack_release.yaml
       - aws s3 cp configuration.json s3://$ARTIFACTS_BUCKET/configuration.json
@@ -17,6 +16,6 @@ phases:
       - ls -la
 artifacts:
   files:
-    - 'infrastructure/aws-stacks/s3updates-stack_release.yaml'
-    - 'infrastructure/configuration.json'
+    - 'aws-stacks/s3updates-stack_release.yaml'
+    - 'configuration.json'
   discard-paths: yes
