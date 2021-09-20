@@ -88,7 +88,7 @@ Resources:
         - Name: S3BUCKETNAME
           Value: 'snsupdatesbucket'
       Source:
-        BuildSpec: infrastructure/buildspec.yml
+        BuildSpec: buildspec.yml
         Type: CODEPIPELINE
 
   PipelineRole:
