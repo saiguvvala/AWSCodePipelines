@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'stack to create s3 resource'
+
+Parameters:
+  Prefix:
+    Type: String
+    Description: The unique prefix following the environment name that the pipleine is deployed to  
+
+  Environment:
+    Type: String
+    Description: The environment that the stack is deployed to
+    Default: sbx
+    AllowedValues:
+      - prd
+      - tst
+      - dev
+      - stg
+      - sbx
+      - int
+
+  BucketName:
+    Type: String
+    Description: S3 bucket location
+
+Resources:
+  S3UpdatesSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "${Prefix}-${Environment}-S3UpdatesTopic"
+      DisplayName: !Sub "${Prefix}-${Environment}-S3UpdatesTopic"
+
+  SNSSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: niroop.maneti@carrier.com
+      Protocol: email
+      TopicArn: !Ref S3UpdatesSNSTopic
+
+  SMSSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: +917981716639
+      Protocol: sms
+      TopicArn: !Ref S3UpdatesSNSTopic
+
+  SNSPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: MyTopicPolicy
+        Version: '2012-10-17'
+        Statement:
+        - Sid: My-statement-id
+          Effect: Allow
+          Principal: '*'
+          Action: sns:Publish
+          Resource: "*"
+      Topics:
+      - !Ref S3UpdatesSNSTopic
+
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DependsOn: [SNSPolicy, S3UpdatesSNSTopic]
+    Properties:
+      BucketName: !Sub "${Prefix}-${Environment}-${BucketName}"
+      NotificationConfiguration:
+        TopicConfigurations:
+          - Topic: !Ref S3UpdatesSNSTopic 
+            Event: 's3:ObjectCreated:*'
