@@ -44,6 +44,13 @@ Resources:
       Protocol: sms
       TopicArn: !Ref S3UpdatesSNSTopic
 
+  SMSSubscription2:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: +919884377883
+      Protocol: sms
+      TopicArn: !Ref S3UpdatesSNSTopic
+
   SNSPolicy:
     Type: AWS::SNS::TopicPolicy
     Properties:
