@@ -63,6 +63,80 @@ Resources:
       TargetAction: authorisation
       TargetPipeline: !Ref CodePipeline
       TargetPipelineVersion: 1
+  CloudFormationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${Environment}-${Prefix}-cloudformation-rol
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - cloudformation.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: !Sub ${Environment}-${Prefix}-cloudformation-role-pol
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - cloudformation:CreateChangeSet
+                - codedeploy:CreateApplication
+                - codedeploy:CreateDeployment
+                - codedeploy:CreateDeploymentGroup 
+                - codedeploy:DeleteApplication
+                - codedeploy:DeleteDeploymentGroup
+                - codedeploy:GetDeployment 
+                - codedeploy:GetDeploymentConfig
+                - codedeploy:RegisterApplicationRevision
+                - iam:CreateRole
+                - iam:GetRole
+                - iam:GetRolePolicy
+                - iam:AttachRolePolicy
+                - iam:DetachRolePolicy
+                - iam:DeleteRolePolicy
+                - iam:DeleteRole
+                - iam:PassRole
+                - iam:PutRolePolicy
+                - iam:GetPolicy
+                - iam:GetPolicyVersion
+                - iam:TagRole
+                - iam:ListRoles
+                - iam:UpdateAssumeRolePolicy
+                - iam:CreateServiceLinkedRole
+                - iam:DeleteServiceLinkedRole
+                - iam:GetServiceLinkedRoleDeletionStatus
+                - s3:CreateBucket
+                - s3:DeleteBucket
+                - s3:DeleteBucketPolicy
+                - s3:SetBucketEncryption
+                - s3:GetEncryptionConfiguration
+                - s3:PutEncryptionConfiguration
+                - s3:PutBucketVersioning
+                - s3:PutBucketPolicy
+                - s3:PutBucketPublicAccessBlock
+                - s3:PutBucketCORS
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetBucketPolicy
+                - s3:GetObject
+                - s3:ListBucket
+              Resource:
+                - '*'
+            - Effect: Allow
+              Action:
+                - logs:*     
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - sns:*
+              Resource: "*"
 
   BuildS3UpdatesStack:
     Type: AWS::CodeBuild::Project
