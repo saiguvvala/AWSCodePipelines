@@ -59,7 +59,7 @@ Resources:
       Topics:
       - !Ref S3UpdatesSNSTopic
 
-  S3Bucket:
+  S3TestBucket:
     Type: 'AWS::S3::Bucket'
     DependsOn: [SNSPolicy, S3UpdatesSNSTopic]
     Properties:
