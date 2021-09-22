@@ -10,12 +10,12 @@ phases:
   post_build:
     commands:
       - sed -i -e "s/{PARAM_PREFIX}/$PREFIX/g; s/{PARAM_ENVIRONMENT}/$ENVIRONMENT/g; s/{PARAM_BUCKETNAME}/$S3BUCKETNAME/g" configuration.json
-      - aws cloudformation package --template-file s3_SNS_IAM.yml --s3-bucket $ARTIFACTS_BUCKET --output-template-file s3_SNS_IAM.yml
-      - aws s3 cp configuration.json s3://$ARTIFACTS_BUCKET/configuration.json
+      - aws cloudformation package --template-file s3_SNS_IAM.yml --s3-bucket $ARTIFACTS_BUCKET --output-template-file s3_SNS_IAM_release.yml
+      - aws s3 cp configuration.json s3://$ARTIFACTS_BUCKET/confmakeiguration.json
       - cd -
       - ls -la
 artifacts:
   files:
-    - 'aws-stacks/s3updates-stack_release.yaml'
+    - 's3_SNS_IAM_release.yml'
     - 'configuration.json'
   discard-paths: yes
