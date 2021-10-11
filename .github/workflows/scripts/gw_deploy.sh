@@ -21,7 +21,7 @@ SNSBUCKETNAME=$(jq -r ".s3SnsBucketName" < .github/workflows/scripts/cfn.json)
 # do a aws ocnfigure in single line reading the secrets from the github secrets
 aws configure set aws_access_key_id ${ACCESS_KEY}
 aws configure set aws_secret_access_key ${SECRET_KEY}
-aws configure set default.region eu-west-2
+aws configure set default.region ap-south-1
 
 ##
 # Assuming the roles required to deploy on the target account.
@@ -38,12 +38,12 @@ export AWS_SESSION_TOKEN="${AWS_SESSION_TOKEN}"
 ##
 # Package infrastructure
 ##
-cd "${GITHUB_WORKSPACE}"/infrastructure
+cd "${GITHUB_WORKSPACE}"
 
 aws cloudformation package \
-    --template-file aws-stacks/s3updates-stack.yml \
+    --template-file s3_SNS_IAM.yml \
     --s3-bucket "${ARTIFACT_NAME}" \
-    --output-template-file aws-stacks/s3updates-stack_release.yaml
+    --output-template-file s3_SNS_IAM_release.yaml
 
 cd "${GITHUB_WORKSPACE}"
 
@@ -52,7 +52,7 @@ cd "${GITHUB_WORKSPACE}"
 # Deploy infrastructure stack.
 ##
 aws cloudformation deploy \
-    --template-file "${GITHUB_WORKSPACE}"/infrastructure/aws-stacks/s3updates-stack_release.yaml \
+    --template-file "${GITHUB_WORKSPACE}"/s3_SNS_IAM_release.yaml \
     --stack-name "${TARGET_ENVIRONMENT}"-"${PREFIX}"-event-stack\
 	--s3-bucket "${ARTIFACT_NAME}" \
 	--capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM \
