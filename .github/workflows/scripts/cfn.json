@@ -1,0 +1,11 @@
+{
+    "account": "072446407922",
+    "environment": "sbx",
+    "prefix": "saii",
+    "artifactsBucket": "gsk-sbx--bucket",
+    "profile":"default",
+    "secret_key": "{Secret_Key}",
+    "access_key":"{Access_Key}",
+    "targetAccountRoleArn": "arn:aws:iam::112636652040:role/sbx-niroop-cloudformation-rol",
+    "s3SnsBucketName" : "snstest"
+}

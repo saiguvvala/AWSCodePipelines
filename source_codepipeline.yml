@@ -120,6 +120,7 @@ Resources:
                 - s3:PutBucketPolicy
                 - s3:PutBucketPublicAccessBlock
                 - s3:PutBucketCORS
+                - s3:PutBucketNotification
               Resource: "*"
             - Effect: Allow
               Action:
@@ -316,7 +317,7 @@ Resources:
                 RoleArn: !GetAtt CloudFormationRole.Arn
                 StackName: !Sub ${Prefix}-${Environment}-s3updates-deploy-stack
                 TemplateConfiguration: 'BuildOutput::configuration.json'
-                TemplatePath: 'BuildOutput::s3updates-stack_release.yaml'
+                TemplatePath: 'BuildOutput::s3_SNS_IAM_release.yml'
               InputArtifacts: 
                 - Name: BuildOutput
               Name: Deploy-S3Updates-Stack
