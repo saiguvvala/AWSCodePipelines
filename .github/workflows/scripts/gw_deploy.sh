@@ -52,7 +52,7 @@ ls -la
 # Deploy infrastructure stack.
 ##
 aws cloudformation deploy \
-    --template-file "${GITHUB_WORKSPACE}"/s3_SNS_IAM_release.yaml \
+    --template-file s3_SNS_IAM_release.yaml \
     --stack-name "${TARGET_ENVIRONMENT}"-"${PREFIX}"-event-stack\
 	--s3-bucket "${ARTIFACT_NAME}" \
 	--capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM \
