@@ -47,7 +47,7 @@ aws cloudformation package \
 
 cd "${GITHUB_WORKSPACE}"
 
-
+ls -la
 ##
 # Deploy infrastructure stack.
 ##
